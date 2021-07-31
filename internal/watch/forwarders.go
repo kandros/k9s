@@ -60,6 +60,17 @@ func (ff Forwarders) IsPodForwarded(path string) bool {
 	return false
 }
 
+func (ff Forwarders) GetForwarders(path string) []Forwarder {
+	fs := []Forwarder{}
+	for k := range ff {
+		fqn := strings.Split(k, ":")
+		if fqn[0] == path {
+			fs = append(fs, ff[k])
+		}
+	}
+	return fs
+}
+
 // IsContainerForwarded checks if pod has a forward
 func (ff Forwarders) IsContainerForwarded(path, co string) bool {
 	_, ok := ff[path+":"+co]

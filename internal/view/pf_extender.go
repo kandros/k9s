@@ -49,8 +49,11 @@ func (p *PortForwardExtender) portFwdCmd(evt *tcell.EventKey) *tcell.EventKey {
 		p.App().Flash().Err(err)
 		return nil
 	}
-	if p.App().factory.Forwarders().IsPodForwarded(pod) {
-		p.App().Flash().Errf("A PortForward already exist for pod %s", pod)
+
+	if fs := p.App().factory.Forwarders().GetForwarders(pod); len(fs) != 0 {
+		if err := showDeleteFwdDialog(p, pod, fs); err != nil {
+			p.App().Flash().Err(err)
+		}
 		return nil
 	}
 	if err := showFwdDialog(p, pod, startFwdCB); err != nil {
@@ -144,6 +147,27 @@ func showFwdDialog(v ResourceViewer, path string, cb PortForwardCB) error {
 		}
 	}
 	ShowPortForwards(v, path, ports, cb)
+
+	return nil
+}
+
+func showDeleteFwdDialog(v ResourceViewer, path string, fs []watch.Forwarder) error {
+	var pf dao.PortForward
+	pf.Init(v.App().factory, client.NewGVR("portforwards"))
+
+	var xxx string
+	for _, v := range fs {
+		xxx += fmt.Sprintf("\n\r%v%v", v.Container(), v.Ports())
+	}
+
+	showModal(v.App().Content.Pages, fmt.Sprintf("Delete PortForward %s?", path, xxx), func() {
+		if err := pf.Delete(path, true, true); err != nil {
+			v.App().Flash().Err(err)
+			return
+		}
+		v.App().Flash().Infof("PortForward %s deleted!", path)
+		v.GetTable().Refresh()
+	})
 
 	return nil
 }
